@@ -306,6 +306,50 @@ async def test_unban_last_ip_deletes_file(hass: HomeAssistant, tmp_path, monkeyp
 
 
 @pytest.mark.asyncio
+async def test_unban_last_ip_without_ban_manager_does_not_delete_file(
+    hass: HomeAssistant, tmp_path, monkeypatch
+):
+    """When the last IP is unbanned but no ban manager is available, the empty
+    ban file must NOT be deleted, since deletion only occurs after a successful
+    ban manager reload. The file stays as an empty dict for the next HA restart."""
+
+    # Create ban file with a single IP
+    ban_file_path = tmp_path / IP_BANS_FILE
+    bans = {
+        "192.168.1.25": {"banned_at": "2025-11-06T21:42:12+00:00"},
+    }
+    with open(ban_file_path, "w") as f:
+        yaml.safe_dump(bans, f)
+
+    monkeypatch.setattr(hass.config, "path", lambda x: str(ban_file_path))
+
+    # No HTTP component → ban manager lookup will fail
+    hass.http = None
+
+    await async_setup_services(hass)
+
+    await hass.services.async_call(
+        DOMAIN,
+        "execute",
+        {"ip_address": "192.168.1.25"},
+        blocking=True,
+    )
+
+    # File must still exist because deletion only happens after a successful
+    # ban manager reload, which was skipped here
+    assert (
+        ban_file_path.exists()
+    ), "File must not be deleted when ban manager is unavailable"
+
+    # File content must be the empty dict written before the reload attempt
+    with open(ban_file_path, "r") as f:
+        content = yaml.safe_load(f)
+    assert (
+        content == {}
+    ), "File must contain empty dict so next HA restart clears all in-memory bans"
+
+
+@pytest.mark.asyncio
 async def test_unban_last_ip_reloads_from_empty_file_before_deleting(
     hass: HomeAssistant, tmp_path, monkeypatch
 ):

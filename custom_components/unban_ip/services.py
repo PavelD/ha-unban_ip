@@ -85,26 +85,24 @@ async def async_setup_services(hass: HomeAssistant):
 
             is_last_ip = not bans  # True when no IPs remain after removal
 
-            try:
-                if is_last_ip:
-                    # Write empty dict first so ban manager can properly clear
-                    # in-memory bans when reloaded. File is deleted after reload.
-                    def write_empty_bans():
-                        with open(ban_file_path, "w") as f:
-                            yaml.safe_dump({}, f, default_flow_style=False)
+            # Write empty dict for last IP so ban manager can clear in-memory
+            # bans on reload; write updated bans otherwise.
+            bans_to_write = {} if is_last_ip else bans
 
-                    await hass.async_add_executor_job(write_empty_bans)
+            try:
+
+                def write_bans_payload() -> None:
+                    with open(ban_file_path, "w") as f:
+                        yaml.safe_dump(bans_to_write, f, default_flow_style=False)
+
+                await hass.async_add_executor_job(write_bans_payload)
+
+                if is_last_ip:
                     _LOGGER.info(
                         f"Last IP removed. Written empty {IP_BANS_FILE} "
                         f"to allow ban manager to clear in-memory bans on reload."
                     )
                 else:
-                    # Write updated bans to file
-                    def write_bans():
-                        with open(ban_file_path, "w") as f:
-                            yaml.safe_dump(bans, f, default_flow_style=False)
-
-                    await hass.async_add_executor_job(write_bans)
                     _LOGGER.info(f"IP {ip_to_unban} removed from {IP_BANS_FILE}.")
             except Exception as e:
                 _LOGGER.error(f"Error updating {IP_BANS_FILE}: {e}")
