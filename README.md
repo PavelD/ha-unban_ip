@@ -1,6 +1,6 @@
 # Unban IP - Home Assistant Custom Integration
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs)
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)
 ![GitHub release](https://img.shields.io/github/v/release/PavelD/ha-unban_ip)
 ![GitHub license](https://img.shields.io/github/license/PavelD/ha-unban_ip)
 
